@@ -5,8 +5,8 @@ builder.WebHost.UseUrls("http://0.0.0.0:5000");
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddOpenApi();
-
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 // Register the HttpClient and the ExternalApiService
 builder.Services.AddHttpClient<IExternalApiService, ExternalApiService>();
 builder.Services.AddSingleton<IConversationService, ConversationService>();
@@ -39,3 +39,4 @@ app.UseCors("AllowAll");
 app.MapControllers();
 
 app.Run();
+
