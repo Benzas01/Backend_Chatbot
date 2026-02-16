@@ -16,8 +16,15 @@ try
     var builder = WebApplication.CreateBuilder(args);
 
     // Railway provides PORT env var — bind to it
-    var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
-    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+    var portVar = Environment.GetEnvironmentVariable("PORT");
+    var port = !string.IsNullOrEmpty(portVar) ? int.Parse(portVar) : 8080;
+    
+    Console.WriteLine($"[Startup] PORT environment variable: '{portVar}' -> Binding to port: {port}");
+
+    builder.WebHost.ConfigureKestrel(options =>
+    {
+        options.ListenAnyIP(port);
+    });
 
     // Add services to the container.
     builder.Services.AddControllers();

@@ -27,6 +27,9 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>.cs</LastGenOutput>
     </None>
+    <Content Include="Prompt.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
