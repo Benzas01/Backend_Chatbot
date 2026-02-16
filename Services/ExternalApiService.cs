@@ -22,8 +22,8 @@ namespace BackendApp.Services
 
        public async Task<string> GetExternalMessageAsync(string inputMessage)
         {
-            Env.Load();
-            var apiKey = Env.GetString("API_KEY");
+            try { Env.Load(); } catch { }
+            var apiKey = Env.GetString("API_KEY", fallback: null) ?? Environment.GetEnvironmentVariable("API_KEY") ?? "";
             var payload = new
             {
                 model = "gpt-4.1-mini",
