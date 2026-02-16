@@ -69,7 +69,12 @@ try
     Console.WriteLine("[Startup] Building app...");
     var app = builder.Build();
     Console.WriteLine("[Startup] App built successfully.");
-
+    app.Use(async (context, next) =>
+    {
+        Console.WriteLine($"[Request] {DateTime.UtcNow:O} {context.Request.Method} {context.Request.Path}");
+        await next();
+        Console.WriteLine($"[Response] {DateTime.UtcNow:O} {context.Response.StatusCode}");
+    });
     // Auto-create database tables on startup
     try
     {
