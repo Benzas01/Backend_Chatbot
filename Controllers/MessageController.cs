@@ -1,11 +1,11 @@
+using BackendApp.Data;
+using BackendApp.Models;
 using BackendApp.Services;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
-using System.IO;
-using System;
+
 namespace BackendApp.Controllers
 {
     public class ApiResponse
@@ -211,11 +211,14 @@ namespace BackendApp.Controllers
     {
         private readonly IExternalApiService _externalApiService;
         private readonly IConversationService _conversationService;
+        private readonly AppDbContext _db;
+        private const string UserCookieName = "UserId";
 
-        public MessageController(IExternalApiService externalApiService, IConversationService conversationService)
+        public MessageController(IExternalApiService externalApiService, IConversationService conversationService, AppDbContext db)
         {
             _externalApiService = externalApiService;
             _conversationService = conversationService;
+            _db = db;
         }
 
         public class MessageRequest
@@ -226,8 +229,11 @@ namespace BackendApp.Controllers
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] MessageRequest request)
         {
+            // 0. Resolve User from cookie
+            var userId = await ResolveUserIdAsync();
+
             // 1. Get History
-            string history = await _conversationService.GetHistoryFormattedAsync();
+            string history = await _conversationService.GetHistoryFormattedAsync(userId);
 
             // 2. Inject Prompt with History and User Content
             var processedRequest = injectprompt(request, history);
@@ -258,8 +264,8 @@ namespace BackendApp.Controllers
             // 4. Save History (User message and AI response)
             if (!string.IsNullOrEmpty(latestText))
             {
-                await _conversationService.AddMessageAsync("User", request.Content);
-                await _conversationService.AddMessageAsync("AI", latestText);
+                await _conversationService.AddMessageAsync(userId, "User", request.Content);
+                await _conversationService.AddMessageAsync(userId, "AI", latestText);
             }
 
             return Ok(new { response = latestText });
@@ -272,6 +278,39 @@ namespace BackendApp.Controllers
             prompt = prompt.Replace("{user.text}", request.Content);
             MessageRequest r = new MessageRequest { Content = prompt };
             return r;
+        }
+
+        private async Task<Guid> ResolveUserIdAsync()
+        {
+            var cookieValue = Request.Cookies[UserCookieName];
+
+            if (!string.IsNullOrEmpty(cookieValue) && Guid.TryParse(cookieValue, out var existingId))
+            {
+                var exists = await _db.Users.AnyAsync(u => u.Id == existingId);
+                if (exists)
+                    return existingId;
+            }
+
+            // Create a new user
+            var newUser = new User
+            {
+                Id = Guid.NewGuid(),
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _db.Users.Add(newUser);
+            await _db.SaveChangesAsync();
+
+            Response.Cookies.Append(UserCookieName, newUser.Id.ToString(), new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.None,
+                Expires = DateTimeOffset.UtcNow.AddYears(1),
+                Path = "/"
+            });
+
+            return newUser.Id;
         }
     }
 }

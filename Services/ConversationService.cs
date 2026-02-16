@@ -1,94 +1,68 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text.Json;
-using System.Threading.Tasks;
+using BackendApp.Data;
+using BackendApp.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace BackendApp.Services
 {
     public interface IConversationService
     {
-        Task AddMessageAsync(string role, string content);
-        Task<List<ConversationMessage>> GetHistoryAsync();
-        Task<string> GetHistoryFormattedAsync(int limit = 10);
-    }
-
-    public class ConversationMessage
-    {
-        public string Role { get; set; }
-        public string Content { get; set; }
-        public DateTime Timestamp { get; set; }
+        Task AddMessageAsync(Guid userId, string role, string content);
+        Task<List<ChatMessage>> GetHistoryAsync(Guid userId);
+        Task<string> GetHistoryFormattedAsync(Guid userId, int limit = 10);
+        Task ClearHistoryAsync(Guid userId);
     }
 
     public class ConversationService : IConversationService
     {
-        private readonly string _filePath = "conversation_history.json";
-        private readonly object _lock = new object();
+        private readonly AppDbContext _db;
 
-        public async Task AddMessageAsync(string role, string content)
+        public ConversationService(AppDbContext db)
         {
-            var message = new ConversationMessage
+            _db = db;
+        }
+
+        public async Task AddMessageAsync(Guid userId, string role, string content)
+        {
+            var message = new ChatMessage
             {
+                UserId = userId,
                 Role = role,
                 Content = content,
                 Timestamp = DateTime.UtcNow
             };
 
-            List<ConversationMessage> history;
-            
-            // Simple file-based persistence with locking for thread safety on file access broadly
-            // Note: For high concurrency, a database is better.
-            lock (_lock)
-            {
-                history = LoadHistoryInternal();
-                history.Add(message);
-                SaveHistoryInternal(history);
-            }
-            
-            await Task.CompletedTask;
+            _db.ChatMessages.Add(message);
+            await _db.SaveChangesAsync();
         }
 
-        public async Task<List<ConversationMessage>> GetHistoryAsync()
+        public async Task<List<ChatMessage>> GetHistoryAsync(Guid userId)
         {
-            lock (_lock)
-            {
-                return LoadHistoryInternal();
-            }
+            return await _db.ChatMessages
+                .Where(m => m.UserId == userId)
+                .OrderBy(m => m.Timestamp)
+                .ToListAsync();
         }
 
-        public async Task<string> GetHistoryFormattedAsync(int limit = 10)
+        public async Task<string> GetHistoryFormattedAsync(Guid userId, int limit = 10)
         {
-            var history = await GetHistoryAsync();
-            // Order by newest to oldest as requested
-            var relevantHistory = history.OrderByDescending(m => m.Timestamp).Take(limit);
+            var history = await _db.ChatMessages
+                .Where(m => m.UserId == userId)
+                .OrderByDescending(m => m.Timestamp)
+                .Take(limit)
+                .ToListAsync();
 
-            var formatted = string.Join("\n", relevantHistory.Select(m => $"{m.Role}: {m.Content}"));
+            var formatted = string.Join("\n", history.Select(m => $"{m.Role}: {m.Content}"));
             return formatted;
         }
 
-        private List<ConversationMessage> LoadHistoryInternal()
+        public async Task ClearHistoryAsync(Guid userId)
         {
-            if (!File.Exists(_filePath))
-            {
-                return new List<ConversationMessage>();
-            }
+            var messages = await _db.ChatMessages
+                .Where(m => m.UserId == userId)
+                .ToListAsync();
 
-            try
-            {
-                var json = File.ReadAllText(_filePath);
-                return JsonSerializer.Deserialize<List<ConversationMessage>>(json) ?? new List<ConversationMessage>();
-            }
-            catch
-            {
-                return new List<ConversationMessage>();
-            }
-        }
-
-        private void SaveHistoryInternal(List<ConversationMessage> history)
-        {
-            var json = JsonSerializer.Serialize(history, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(_filePath, json);
+            _db.ChatMessages.RemoveRange(messages);
+            await _db.SaveChangesAsync();
         }
     }
 }
