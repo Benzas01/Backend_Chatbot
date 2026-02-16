@@ -1,0 +1,22 @@
+[
+  {
+    "Role": "User",
+    "Content": "car broke",
+    "Timestamp": "2026-02-12T18:32:21.5129067Z"
+  },
+  {
+    "Role": "AI",
+    "Content": "Please provide the make and model of your vehicle so I can assist you properly. Also, please describe what exactly happened or what issues you are experiencing with your car.",
+    "Timestamp": "2026-02-12T18:32:21.5203274Z"
+  },
+  {
+    "Role": "User",
+    "Content": "2023 toyota chr, wheel noise",
+    "Timestamp": "2026-02-12T18:33:11.7352054Z"
+  },
+  {
+    "Role": "AI",
+    "Content": "You have a 2023 Toyota C-HR and are experiencing wheel noise.\n\nWheel noise can range in severity. It may be caused by issues such as worn brake components, loose wheel bearings, or tire problems. \n\nTo assess severity:\n- If the noise is constant, loud, or accompanied by vibrations, pulling to one side, or changes in handling, this could indicate a serious safety issue (critical).\n- If the noise only occurs during certain maneuvers at low speeds or is intermittent, it may be less severe (menial or moderate).\n\nPlease describe the nature of the wheel noise (e.g., when it occurs, if it changes with speed, if you feel vibrations or pulling). This will help me guide you further.",
+    "Timestamp": "2026-02-12T18:33:11.7378225Z"
+  }
+]
