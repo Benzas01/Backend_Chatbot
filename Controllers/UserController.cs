@@ -63,6 +63,39 @@ namespace BackendApp.Controllers
         }
 
         /// <summary>
+        /// Clears the user from the database (and thus their chat history via cascade delete)
+        /// and removes the cookie
+        /// </summary>
+        [HttpPost("~/api/clear")]
+        [HttpDelete("~/api/clear")]
+        public async Task<IActionResult> ClearUser()
+        {
+            var cookieValue = Request.Cookies[UserCookieName];
+            if (string.IsNullOrEmpty(cookieValue) || !Guid.TryParse(cookieValue, out var userId))
+            {
+                // If no user cookie, technically we are already "empty", but return OK to be idempotent
+                return Ok(new { message = "User not found or already cleared." });
+            }
+
+            var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            if (user != null)
+            {
+                _db.Users.Remove(user);
+                await _db.SaveChangesAsync();
+            }
+
+            // Remove the cookie
+            Response.Cookies.Delete(UserCookieName, new CookieOptions
+            {
+                Path = "/",
+                SameSite = SameSiteMode.None,
+                Secure = true
+            });
+
+            return Ok(new { message = "User and chat history wiped." });
+        }
+
+        /// <summary>
         /// Resolves the user ID from the cookie or creates a new user.
         /// Sets the cookie on the response if newly created.
         /// </summary>

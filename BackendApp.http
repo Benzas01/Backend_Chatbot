@@ -4,3 +4,10 @@ GET {{BackendApp_HostAddress}}/weatherforecast/
 Accept: application/json
 
 ###
+POST {{BackendApp_HostAddress}}/api/clear
+Accept: application/json
+Cookie: UserId=YOUR_GUID_HERE
+
+###
+GET {{BackendApp_HostAddress}}/api/User
+Accept: application/json
